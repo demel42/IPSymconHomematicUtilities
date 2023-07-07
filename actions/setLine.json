@@ -1,0 +1,72 @@
+{
+	"id": "{7777E22F-5C5C-4DBE-A87C-8BFAA90FB913}",
+	"caption": "Set textline on HmIP-WRCD",
+	"form": [
+		"return [",
+		"  [",
+		"    'type' => 'NumberSpinner',",
+		"    'name' => 'ROW',",
+		"    'caption' => 'Row',",
+		"    'minimum' => 1,",
+		"    'maximum' => 5,",
+		"  ],",
+		"  [",
+		"    'type' => 'ValidationTextBox',",
+		"    'name' => 'TEXT',",
+		"    'caption' => 'Text',",
+		"  ],",
+		"  [",
+		"    'type' => 'Select',",
+		"    'name' => 'TEXTCOLOR',",
+		"    'caption' => 'Textcolor',",
+		"    'options' => HmIPWRCD_ColorAsOptions($_IPS['TARGET']),",
+		"  ],",
+		"  [",
+		"    'type' => 'Select',",
+		"    'name' => 'BACKGROUND',",
+		"    'caption' => 'Background',",
+		"    'options' => HmIPWRCD_ColorAsOptions($_IPS['TARGET']),",
+		"  ],",
+		"  [",
+		"    'type' => 'Select',",
+		"    'name' => 'ALIGNMENT',",
+		"    'caption' => 'Alignment',",
+		"    'options' => HmIPWRCD_AlignmentAsOptions($_IPS['TARGET']),",
+		"  ],",
+		"  [",
+		"    'type' => 'Select',",
+		"    'name' => 'ICON',",
+		"    'caption' => 'Icon',",
+		"    'options' => HmIPWRCD_IconAsOptions($_IPS['TARGET']),",
+		"  ],",
+		"];"
+	],
+	"action": "HmIPWRCD_SetLine($_IPS['TARGET'], $_IPS['ROW'], $_IPS['TEXT'], $_IPS['TEXTCOLOR'], $_IPS['BACKGROUND'], $_IPS['ALIGNMENT'], $_IPS['ICON']);",
+	"restrictions": {
+		"objectType": [
+			1
+		],
+		"moduleID": [
+			"{F90B5EDE-9F48-58D2-9E0D-7D784C2CE6CA}"
+		],
+		"includeEnvironments": [
+			"TestCommands",
+			"Default"
+		]
+	},
+	"priority": 10,
+	"category": "target",
+	"format": "Set line {row} with text \"{TEXT}\"",
+	"locale": {
+		"de": {
+			"Set textline on HmIP-WRCD": "Textzeile auf HmIP-WRCD setzen",
+			"Row": "Zeile",
+			"Text": "Text",
+			"Textcolor": "Schriftfarbe",
+			"Background": "Hintergrund",
+			"Alignment": "Ausrichtung",
+			"Icon": "Icon",
+			"Set line {row} with text \"{TEXT}\"": "Setze Zeile {row} mit Text \"{TEXT}\""
+		}
+	}
+}

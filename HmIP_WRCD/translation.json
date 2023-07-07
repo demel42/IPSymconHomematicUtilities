@@ -1,0 +1,98 @@
+{
+	"translations": {
+		"de": {
+			"HmIP WRCD": "HmIP WRCD",
+
+			"__properties__": "",
+			"Disable instance": "Instanz deaktivieren",
+
+			"Homematic instances": "Homematic-Instanzen",
+			"Channel 3": "Kanal 3",
+			"Channel 0": "Kanal 0",
+
+			"Delay before transmission": "Wartezeit vor Übertragung",
+			"Pause between transmissions": "Pause zwischen Übertragungen",
+
+			"Seconds": "Sekunden",
+
+			"Last transmission": "Letzte Übertragung",
+			"Textlines": "Textzeilen",
+			"Row": "Zeile",
+			"Text": "Text",
+			"Textcolor": "Schriftfarbe",
+			"Background": "Hintergrund",
+			"Alignment": "Ausrichtung",
+			"Icon": "Icon",
+
+			"Signal": "Signal",
+			"Sound": "Klang",
+			"Repetition": "Wiederholung",
+			"Interval": "Intervall",
+
+			"__options__": "icon",
+			"None": "kein",
+			"Lamp off": "Lampe aus",
+			"Lamp on": "Lampe ein",
+			"Padlock open": "Schloss auf",
+			"Padlock closed": "Schloss zu",
+			"Error": "Fehler",
+			"Okay": "Okay",
+			"Info": "Info",
+			"New message": "Neue Nachricht",
+			"Service message": "Servicemeldung",
+			"Sun": "Sonne",
+			"Moon": "Mond",
+			"Wind": "Wind",
+			"Cloud": "Wolke",
+			"Thunderstorm": "Gewitter",
+			"Drizzle": "leichter Regen",
+			"Cloud and moon": "Wolke mit Mond",
+			"Rain": "Regen",
+			"Snow": "Schnee",
+			"Cloud and sun": "Wolke mit Sonne",
+			"Cloud, sun and rain": "Wolke, Sonne und Regen",
+			"Snowflake": "Schneeflocke",
+			"Raindrop": "Regentropfen",
+			"Flame": "Flamme",
+			"Window open": "Fenster auf",
+			"Shutters": "Rollladen",
+			"Eco": "Eco",
+			"Disarmed": "Unscharf",
+			"External protection": "Hüllschutz",
+			"Internal protection": "Vollschutz",
+			"Bell": "Glocke",
+			"Clock": "Uhr",
+
+			"__options__": "color",
+			"White": "Weiss",
+			"Black": "Schwarz",
+
+			"__options__": "alignment",
+			"Left": "Linksbündig",
+			"Center": "Zentriert",
+			"Right": "Rechtsbündig",
+
+			"__options__": "sound",
+			"short-short-short": "kurz-kurz-kurz",
+			"long-short": "lang-kurz",
+			"long-short-short": "lang-kurz-kurz",
+			"long-short": "lang-kurz",
+			"short-short": "kurz-kurz",
+			"short": "kurz",
+			"medium": "mittel",
+			"long": "lang",
+
+			"__options__": "interval",
+			"no": "keine",
+			"infinite": "unendlich",
+
+			"__actions__": "",
+			"Retransmit": "Neu übertragen",
+
+			"__variables__": "",
+			"Last sync": "Letzte Synchronisation",
+
+			"__end__": ""
+		}
+	}
+}

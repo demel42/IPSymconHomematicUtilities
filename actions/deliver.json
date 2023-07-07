@@ -1,0 +1,40 @@
+{
+	"id": "{40990B68-C2E4-2EFD-487A-AA0B239078A1}",
+	"caption": "Deliver setting to HmIP-WRCD",
+	"form": [
+		"return [",
+		"  [",
+		"    'type' => 'CheckBox',",
+		"    'name' => 'DELAYED',",
+		"    'caption' => 'Delayed delivery',",
+		"  ],",
+		"  [",
+		"    'type' => 'CheckBox',",
+		"    'name' => 'FORCE',",
+		"    'caption' => 'Force delivery',",
+		"  ],",
+		"];"
+	],
+	"action": "HmIPWRCD_Deliver($_IPS['TARGET'], $_IPS['DELAYED'], $_IPS['FORCE']);",
+	"restrictions": {
+		"objectType": [
+			1
+		],
+		"moduleID": [
+			"{F90B5EDE-9F48-58D2-9E0D-7D784C2CE6CA}"
+		],
+		"includeEnvironments": [
+			"TestCommands",
+			"Default"
+		]
+	},
+	"priority": 10,
+	"category": "target",
+	"locale": {
+		"de": {
+			"Deliver setting to HmIP-WRCD": "Einstellung an HmIP-WRCD übertragen",
+			"Delayed delivery": "Verzögerte Übertragung",
+			"Force delivery": "Übertragung erzwingen"
+		}
+	}
+}

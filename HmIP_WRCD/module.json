@@ -1,0 +1,12 @@
+{
+	"id": "{F90B5EDE-9F48-58D2-9E0D-7D784C2CE6CA}",
+	"name": "HmIP WRCD",
+	"type": 3,
+	"vendor": "",
+	"aliases": [],
+	"parentRequirements": [],
+	"childRequirements": [],
+	"implemented": [],
+	"prefix": "HmIPWRCD",
+	"url": "https://github.com/demel42/IPSymconHomematicUtilities/blob/master/README.md"
+}
