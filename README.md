@@ -69,5 +69,9 @@ Es werden folgende Variablenprofile angelegt:
 
 ## 7. Versions-Historie
 
+- 1.1 @ 19.09.2023 09:28
+  - Neu: Ermittlung von Speicherbedarf und Laufzeit (aktuell und für 31 Tage) und Anzeige im Panel "Information"
+  - update submodule CommonStubs
+
 - 1.0 @ 07.07.2023 12:17
   - Initiale Version

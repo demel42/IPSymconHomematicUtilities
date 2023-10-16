@@ -10,8 +10,6 @@ class HmIPWRCD extends IPSModule
     use HomematicUtilities\StubsCommonLib;
     use HomematicUtilitiesLocalLib;
 
-    private static $semaphoreTM = 5 * 1000;
-
     private static $numberOfLines = 5;
     private static $maxCharOnly = 14;
     private static $maxCharWithIcon = 11;
@@ -22,15 +20,21 @@ class HmIPWRCD extends IPSModule
     private static $STEP_DONE = 3;
     private static $STEP_FAIL = 4;
 
-    private $ModuleDir;
+    private static $semaphoreTM = 5 * 1000;
+
     private $SemaphoreID;
 
     public function __construct(string $InstanceID)
     {
         parent::__construct($InstanceID);
 
-        $this->ModuleDir = __DIR__;
+        $this->CommonContruct(__DIR__);
         $this->SemaphoreID = __CLASS__ . '_' . $InstanceID;
+    }
+
+    public function __destruct()
+    {
+        $this->CommonDestruct();
     }
 
     public function Create()
@@ -49,7 +53,8 @@ class HmIPWRCD extends IPSModule
         $this->RegisterAttributeInteger('step', self::$STEP_NEW);
         $this->RegisterAttributeString('last_parameter', '');
 
-        $this->RegisterAttributeString('UpdateInfo', '');
+        $this->RegisterAttributeString('UpdateInfo', json_encode([]));
+        $this->RegisterAttributeString('ModuleStats', json_encode([]));
 
         $this->InstallVarProfiles(false);
 
