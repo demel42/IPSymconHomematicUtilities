@@ -36,10 +36,12 @@ Setzt den Text für eine bestimmte Zeile
 - *row*: Zeile 1..5
 - *text*: anzuzeigender Text, Umlauten werden korrekt umkodiert
 - *textcolor*, *background*: Text- und Hintergrundfarbe
+
 | ID | Ident | Bedeutung |
 | :- | :---- | :-------- |
 | 0  | WHITE | Weiss |
 | 1  | BLACK | Schwarz |
+
 - *alignment*: Text-Alignment
 | ID | Ident  | Bedeutung |
 | :- | :----- | :-------- |
