@@ -43,12 +43,15 @@ Setzt den Text für eine bestimmte Zeile
 | 1  | BLACK | Schwarz |
 
 - *alignment*: Text-Alignment
+
 | ID | Ident  | Bedeutung |
 | :- | :----- | :-------- |
 | 0  | LEFT   | Linksbündig |
 | 1  | CENTER | Zentriert |
 | 2  | RIGHT  | Rechtsbündig |
+
 - *icon*: Icon
+
 | ID  | Ident                  | Bedeutung |
 | :-- | :--------------------- | :-------- |
 | 0   | NONE                   | kein |
@@ -86,6 +89,7 @@ Setzt den Text für eine bestimmte Zeile
 
 `HmIPWRCD_SetSignal(int $InstanceID, int $sound, int $repetition, int $interval)`<br>
 - *sound*: Art des Signals
+
 | ID | Ident                    | Bedeutung |
 | :- | :----------------------- | :-------- |
 | -1 | NONE                     | kein |
@@ -97,6 +101,7 @@ Setzt den Text für eine bestimmte Zeile
 | 5  | DELAYED_EXTERNALLY_ARMED | kurz |
 | 6  | EVENT                    | mittel |
 | 7  | ERROR                    | lang |
+
 - *repetition*: Anzahl der Wiederholung
 - *interval*: Pause zwischne den Wiederholungen in Sekunden
 
