@@ -88,7 +88,7 @@ Setzt den Text für eine bestimmte Zeile
 | 31  | CLOCK                  | Uhr |
 
 `HmIPWRCD_SetSignal(int $InstanceID, int $sound, int $repetition, int $interval)`<br>
-- *sound*: Art des Signals
+- *sound*: Ausprägung der Signaltöne
 
 | ID | Ident                    | Bedeutung |
 | :- | :----------------------- | :-------- |
