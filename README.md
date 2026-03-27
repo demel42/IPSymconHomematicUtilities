@@ -153,6 +153,9 @@ Es werden folgende Variablenprofile angelegt:
 
 ## 7. Versions-Historie
 
+- 1.4 @ 27.03.2026 09:55
+  - Fix: Anpassung für IPS 9
+
 - 1.3 @ 22.12.2024 12:12
   - Verbesserung: README angepasst
   - update submodule CommonStubs
