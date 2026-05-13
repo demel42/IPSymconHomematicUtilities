@@ -153,6 +153,10 @@ Es werden folgende Variablenprofile angelegt:
 
 ## 7. Versions-Historie
 
+- 1.5 @ 09.05.2026 11:36
+  - Fix: Änderung von deprecated php code
+  - update submodule CommonStubs
+
 - 1.4 @ 27.03.2026 09:55
   - Fix: Anpassung für IPS 9
 
