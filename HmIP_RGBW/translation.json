@@ -1,0 +1,24 @@
+{
+	"translations": {
+		"de": {
+			"HmIP RGBW": "HmIP RGBW",
+
+			"__CheckModuleConfiguration__": "",
+			"Field \"{$field}\" is not configured": "Feld \"{$field}\" ist nicht konfiguriert",
+			"Instance of Channel 0": "Instanz von Kanal 0",
+			"Instance of Channel 1": "Instanz von Kanal 1",
+
+			"__properties__": "",
+			"Disable instance": "Instanz deaktivieren",
+
+			"Homematic instances": "Homematic-Instanzen",
+			"Channel 0": "Kanal 0",
+			"Channel 1": "Kanal 1",
+
+			"__variables__": "",
+			"Last sync": "Letzte Synchronisation",
+
+			"__end__": ""
+		}
+	}
+}

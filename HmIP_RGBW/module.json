@@ -1,0 +1,12 @@
+{
+	"id": "{872EE086-0F1E-C7F3-14A6-654869563581}",
+	"name": "HmIP RGBW",
+	"type": 3,
+	"vendor": "",
+	"aliases": [],
+	"parentRequirements": [],
+	"childRequirements": [],
+	"implemented": [],
+	"prefix": "HmIPRGBW",
+	"url": "https://github.com/demel42/IPSymconHomematicUtilities/blob/main/README.md"
+}
