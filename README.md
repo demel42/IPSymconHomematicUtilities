@@ -147,11 +147,15 @@ Es werden folgende Variablenprofile angelegt:
 - Modul: `{C2E2C3CE-D6D5-F717-F9FB-6EB9785D8ED1}`
 - Instanzen:
   - HmIP_WRCD: `{B052AEAB-2687-02EB-DF40-74191E242A0B}`
+  - HmIP_RGBW: `{872EE086-0F1E-C7F3-14A6-654869563581}`
 - Nachrichten:
 
 ### Quellen
 
 ## 7. Versions-Historie
+
+- 1.6 @ 17.10.2026 14:23
+  - Neu: Modul HmIP_RGBW hinzugefügt
 
 - 1.5 @ 09.05.2026 11:36
   - Fix: Änderung von deprecated php code

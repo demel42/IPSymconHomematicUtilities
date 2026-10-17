@@ -34,5 +34,7 @@ trait HomematicUtilitiesLocalLib
         if ($reInstall) {
             $this->SendDebug(__FUNCTION__, 'reInstall=' . $this->bool2str($reInstall), 0);
         }
+
+        $this->CreateVarProfile('HmIPRGBW.Kelvin', VARIABLETYPE_INTEGER, ' K', 1000, 15000, 1, 0, 'palette', [], $reInstall);
     }
 }

@@ -55,7 +55,17 @@ class HmIPRGBW extends IPSModule
         parent::MessageSink($timestamp, $senderID, $message, $data);
 
         if ($message == IPS_KERNELMESSAGE && $data[0] == KR_READY) {
-            // check pending transmission
+            $instID = $this->ReadPropertyInteger('chan1_instID');
+            foreach (['HUE', 'SATURATION', 'LEVEL'] as $ident) {
+                @$varID = IPS_GetObjectIDByIdent($ident, $instID);
+                if (IPS_VariableExists($varID)) {
+                    $this->RegisterMessage($varID, VM_UPDATE);
+                }
+            }
+        }
+
+        if (IPS_GetKernelRunlevel() == KR_READY && $message == VM_UPDATE && $data[1] == true /* changed */) {
+            $this->SyncFromDevice();
         }
     }
 
@@ -91,29 +101,36 @@ class HmIPRGBW extends IPSModule
 
         if ($this->CheckPrerequisites() != false) {
             $this->MaintainTimer('TimerWakeUpLight', 0);
+            $this->WriteAttributeString('wake_up_light', json_encode([]));
             $this->MaintainStatus(self::$IS_INVALIDPREREQUISITES);
             return;
         }
 
         if ($this->CheckUpdate() != false) {
             $this->MaintainTimer('TimerWakeUpLight', 0);
+            $this->WriteAttributeString('wake_up_light', json_encode([]));
             $this->MaintainStatus(self::$IS_UPDATEUNCOMPLETED);
             return;
         }
 
         if ($this->CheckConfiguration() != false) {
             $this->MaintainTimer('TimerWakeUpLight', 0);
+            $this->WriteAttributeString('wake_up_light', json_encode([]));
             $this->MaintainStatus(self::$IS_INVALIDCONFIG);
             return;
         }
 
         $vpos = 1;
 
-        $this->MaintainVariable('LastSync', $this->Translate('Last sync'), VARIABLETYPE_INTEGER, '~UnixTimestamp', $vpos++, true);
+        $this->MaintainVariable('Color', $this->Translate('Color'), VARIABLETYPE_INTEGER, '~HexColor', $vpos++, true);
+        $this->MaintainAction('Color', true);
+        $this->MaintainVariable('ColorTemp', $this->Translate('Color temperatur'), VARIABLETYPE_INTEGER, 'HmIPRGBW.Kelvin', $vpos++, true);
+        $this->MaintainAction('ColorTemp', true);
 
         $module_disable = $this->ReadPropertyBoolean('module_disable');
         if ($module_disable) {
             $this->MaintainTimer('TimerWakeUpLight', 0);
+            $this->WriteAttributeString('wake_up_light', json_encode([]));
             $this->MaintainStatus(IS_INACTIVE);
             return;
         }
@@ -121,7 +138,15 @@ class HmIPRGBW extends IPSModule
         $this->MaintainStatus(IS_ACTIVE);
 
         if (IPS_GetKernelRunlevel() == KR_READY) {
-            // check pending transmission
+            $instID = $this->ReadPropertyInteger('chan1_instID');
+            foreach (['HUE', 'SATURATION', 'LEVEL'] as $ident) {
+                @$varID = IPS_GetObjectIDByIdent($ident, $instID);
+                if (IPS_VariableExists($varID)) {
+                    $this->RegisterMessage($varID, VM_UPDATE);
+                }
+            }
+
+            $this->SyncFromDevice();
         }
     }
 
@@ -236,6 +261,14 @@ class HmIPRGBW extends IPSModule
 
         $r = false;
         switch ($ident) {
+            case 'Color':
+                $r = $this->SetColor((int) $value);
+                $this->SendDebug(__FUNCTION__, $ident . '=' . $value . ' => ret=' . $this->bool2str($r), 0);
+                break;
+            case 'ColorTemp':
+                $r = $this->SetColorTemp((int) $value);
+                $this->SendDebug(__FUNCTION__, $ident . '=' . $value . ' => ret=' . $this->bool2str($r), 0);
+                break;
             default:
                 $this->SendDebug(__FUNCTION__, 'invalid ident ' . $ident, 0);
                 break;
@@ -245,23 +278,88 @@ class HmIPRGBW extends IPSModule
         }
     }
 
-    private function TimerWakeUpLight()
+    private function SyncFromDevice()
+    {
+        $instID = $this->ReadPropertyInteger('chan1_instID');
+
+        @$varID = IPS_GetObjectIDByIdent('HUE', $instID);
+        if ($varID == false) {
+            $this->SendDebug(__FUNCTION__, 'device-variable "HUE" missing', 0);
+            return;
+        }
+        $h = GetValue($varID);
+
+        @$varID = IPS_GetObjectIDByIdent('SATURATION', $instID);
+        if ($varID == false) {
+            $this->SendDebug(__FUNCTION__, 'device-variable "SATURATION" missing', 0);
+            return;
+        }
+        $s = (int) (GetValue($varID) * 100);
+
+        @$varID = IPS_GetObjectIDByIdent('LEVEL', $instID);
+        if ($varID == false) {
+            $this->SendDebug(__FUNCTION__, 'device-variable "LEVEL" missing', 0);
+            return;
+        }
+        $v = (int) (GetValue($varID) * 100);
+
+        $rgb = $this->HSV2RGB($h, $s, $v);
+
+        $this->SendDebug(__FUNCTION__, 'H=' . $h . ', S=' . $s . ', V=' . $v . ' => R=' . $rgb['R'] . ', G=' . $rgb['G'] . ', B=' . $rgb['B'], 0);
+
+        $c = $this->RGB2Val($rgb['R'], $rgb['G'], $rgb['B']);
+        if ($c != $this->GetValue('Color')) {
+            $this->SetValue('Color', $c);
+        }
+
+        $k = $this->RGB2Kelvin($rgb['R'], $rgb['G'], $rgb['B']);
+        if ($k != $this->GetValue('ColorTemp')) {
+            $this->SetValue('ColorTemp', $k);
+        }
+    }
+
+    public function SetColor(int $val)
     {
         if ($this->CheckStatus() == self::$STATUS_INVALID) {
             $this->SendDebug(__FUNCTION__, $this->GetStatusText() . ' => skip', 0);
-            return;
+            return false;
         }
 
-        $last_sync = $this->GetValue('LastSync');
-        $now = time();
+        $rgb = $this->Val2RGB($val);
+        $hsv = $this->RGB2HSV($rgb['R'], $rgb['G'], $rgb['B']);
+        $r = $this->SendCombinedParameter($hsv['V'], $hsv['H'], $hsv['S']);
 
-        $sec = 0;
+        return $r;
+    }
 
-        $this->MaintainTimer('TimerWakeUpLight', $sec * 1000);
+    public function SetColorTemp(int $val)
+    {
+        if ($this->CheckStatus() == self::$STATUS_INVALID) {
+            $this->SendDebug(__FUNCTION__, $this->GetStatusText() . ' => skip', 0);
+            return false;
+        }
+
+        $instID = $this->ReadPropertyInteger('chan1_instID');
+        @$varID = IPS_GetObjectIDByIdent('LEVEL', $instID);
+        if ($varID == false) {
+            $level = 100;
+        } else {
+            $level = (int) (GetValue($varID) * 100);
+        }
+
+        $hsv = $this->Kelvin2HSV($val, $level);
+        $r = $this->SendCombinedParameter($hsv['V'], $hsv['H'], $hsv['S']);
+
+        return $r;
     }
 
     public function SendCombinedParameter(int $level, int $hue, int $saturation)
     {
+        if ($this->CheckStatus() == self::$STATUS_INVALID) {
+            $this->SendDebug(__FUNCTION__, $this->GetStatusText() . ' => skip', 0);
+            return false;
+        }
+
         if ($level < 0 || $level > 100) {
             $this->SendDebug(__FUNCTION__, 'level $level ist not between 0..100 %', 0);
             return false;
@@ -298,97 +396,13 @@ class HmIPRGBW extends IPSModule
         } else {
             $msg = 'HM_WriteValueString(' . $instID . ', \'' . $ident . '\', ' . $paramS . ') succed';
             $this->SendDebug(__FUNCTION__, $msg, 0);
-            $this->SetValue('LastSync', time());
             return true;
         }
     }
 
-    // HSV in RGB umrechnen
-    public function HSV2RGB(float $h, float $s, float $v): array
-    {
-        $s /= 100;
-        $v /= 100;
-
-        if ($s == 0) {
-            $r = $g = $b = $v * 255;
-        } else {
-            $h /= 60;
-            $i = floor($h);
-            $f = $h - $i;
-
-            $p = $v * (1 - $s);
-            $q = $v * (1 - $s * $f);
-            $t = $v * (1 - $s * (1 - $f));
-
-            switch ($i) {
-                case 0:
-                    $r = $v;
-                    $g = $t;
-                    $b = $p;
-                    break;
-                case 1:
-                    $r = $q;
-                    $g = $v;
-                    $b = $p;
-                    break;
-                case 2:
-                    $r = $p;
-                    $g = $v;
-                    $b = $t;
-                    break;
-                case 3:
-                    $r = $p;
-                    $g = $q;
-                    $b = $v;
-                    break;
-                case 4:
-                    $r = $t;
-                    $g = $p;
-                    $b = $v;
-                    break;
-                default:
-                    $r = $v;
-                    $g = $p;
-                    $b = $q;
-                    break;
-            }
-
-            $r *= 255;
-            $g *= 255;
-            $b *= 255;
-        }
-
-        return [
-            'R' => $r,
-            'G' => $g,
-            'B' => $b,
-        ];
-    }
-
-    // HSV in RGBW umrechnen
-    public function HSV2RGBW(float $h, float $s, float $v): array
-    {
-        $rgb = $this->HSV2RGB($h, $s, $v);
-
-        // Der gemeinsame Nenner aller Farbkanäle repräsentiert den Weiß-Anteil.
-        $w = min($rgb['R'], $rgb['G'], $rgb['B']);
-
-        // Weiß-Anteil von den RGB-Kanälen abziehen, um Mischlicht-Verfälschungen zu verhindern
-        $r = $rgb['R'] - $w;
-        $g = $rgb['G'] - $w;
-        $b = $rgb['B'] - $w;
-
-        return [
-            'R' => $r,
-            'G' => $g,
-            'B' => $b,
-            'W' => $w,
-        ];
-    }
-
     // Berechnung eines Lichtwecker-Schrittes im HSV-Farbraum und RGBW-Werten
     // progress 0..1
-    public function calcLightWakeupStep(float $progress): array
+    public function calcLightWakeupStep(float $progress)
     {
         // Grenzen absichern
         $progress = max(0.0, min(1.0, $progress));
@@ -415,7 +429,7 @@ class HmIPRGBW extends IPSModule
         ];
     }
 
-    public function calculateSunrise(float $progress, float $maxBrightness = 1.0): array
+    public function calculateSunrise(float $progress, float $maxBrightness = 1.0)
     {
         // 1. Eingrenzung des Fortschritts zur Sicherheit
         $progress = max(0.0, min(1.0, $progress));
@@ -472,6 +486,11 @@ class HmIPRGBW extends IPSModule
 
     public function StartWakeUpLight(int $minutes, int $target_brightness)
     {
+        if ($this->CheckStatus() == self::$STATUS_INVALID) {
+            $this->SendDebug(__FUNCTION__, $this->GetStatusText() . ' => skip', 0);
+            return false;
+        }
+
         if (IPS_SemaphoreEnter($this->SemaphoreID, $this->SemaphoreTM) == false) {
             $this->SendDebug(__FUNCTION__, 'unable to lock sempahore ' . $this->SemaphoreID, 0);
             return false;
@@ -535,6 +554,11 @@ class HmIPRGBW extends IPSModule
 
     public function LoopWakeUpLight()
     {
+        if ($this->CheckStatus() == self::$STATUS_INVALID) {
+            $this->SendDebug(__FUNCTION__, $this->GetStatusText() . ' => skip', 0);
+            return false;
+        }
+
         if (IPS_SemaphoreEnter($this->SemaphoreID, $this->SemaphoreTM) == false) {
             $this->SendDebug(__FUNCTION__, 'unable to lock sempahore ' . $this->SemaphoreID, 0);
             return false;
@@ -628,5 +652,309 @@ class HmIPRGBW extends IPSModule
 
         $this->AddModuleActivity($msg, self::$ModuleActivityLines);
         return true;
+    }
+
+    // RGB in RGBW umrechnen
+    public function RGB2RGBW(int $r, int $g, int $b)
+    {
+        $w = min($r, $g, $b);
+
+        // Weiß-Anteil von den RGB-Kanälen abziehen, um Mischlicht-Verfälschungen zu verhindern
+        $r = $r - $w;
+        $g = $g - $w;
+        $b = $b - $w;
+
+        return [
+            'R' => (int) $r,
+            'G' => (int) $g,
+            'B' => (int) $b,
+            'W' => (int) $w,
+        ];
+    }
+
+    // HSV in RGB umrechnen
+    public function HSV2RGB(float $h, float $s, float $v)
+    {
+        $s /= 100;
+        $v /= 100;
+
+        $c = $v * $s;
+        $x = $c * (1 - abs(fmod(($h / 60), 2) - 1));
+        $m = $v - $c;
+
+        if ($h >= 0 && $h < 60) {
+            [$r, $g, $b] = [$c, $x, 0];
+        } elseif ($h >= 60 && $h < 120) {
+            [$r, $g, $b] = [$x, $c, 0];
+        } elseif ($h >= 120 && $h < 180) {
+            [$r, $g, $b] = [0, $c, $x];
+        } elseif ($h >= 180 && $h < 240) {
+            [$r, $g, $b] = [0, $x, $c];
+        } elseif ($h >= 240 && $h < 300) {
+            [$r, $g, $b] = [$x, 0, $c];
+        } else {
+            [$r, $g, $b] = [$c, 0, $x];
+        }
+
+        return [
+            'R' => (int) round(($r + $m) * 255),
+            'G' => (int) round(($g + $m) * 255),
+            'B' => (int) round(($b + $m) * 255),
+        ];
+    }
+
+    // RGB in RGBW umrechnen
+    public function HSV2RGBW(float $h, float $s, float $v)
+    {
+        $rgb = $this->HSV2RGB($h, $s, $v);
+        $rgbw = $this->RGB2RGBW($rgb['R'], $rgb['G'], $rgb['B']);
+
+        return $rgbw;
+    }
+
+    public function Kelvin2HSV(int $kelvin, int $brightness)
+    {
+        // 1. Eingrenzen und Vorbereiten für die RGB-Näherung
+        if ($kelvin < 1000) {
+            $kelvin = 1000;
+        } elseif ($kelvin > 40000) {
+            $kelvin = 40000;
+        }
+        $temp = $kelvin / 100;
+
+        // --- Schritt A: Kelvin zu RGB Näherung (Tanner Helland Algorithmus) ---
+        // Rot
+        if ($temp <= 66) {
+            $r = 255;
+        } else {
+            $r = $temp - 60;
+            $r = 329.698727446 * pow($r, -0.1332047592);
+        }
+        // Grün
+        if ($temp <= 66) {
+            $g = $temp;
+            $g = 99.4708025861 * log($g) - 161.1195681661;
+        } else {
+            $g = $temp - 60;
+            $g = 288.1221695283 * pow($g, -0.0755148492);
+        }
+        // Blau
+        if ($temp >= 66) {
+            $b = 255;
+        } else {
+            if ($temp <= 19) {
+                $b = 0;
+            } else {
+                $b = $temp - 10;
+                $b = 138.5177312231 * log($b) - 305.0447927307;
+            }
+        }
+
+        // RGB-Werte auf 0-255 begrenzen und normalisieren (0.0 bis 1.0)
+        $r = max(0, min(255, $r)) / 255;
+        $g = max(0, min(255, $g)) / 255;
+        $b = max(0, min(255, $b)) / 255;
+
+        // --- Schritt B: RGB zu HSV Konvertierung ---
+        $max = max($r, $g, $b);
+        $min = min($r, $g, $b);
+        $delta = $max - $min;
+
+        // 1. Hue (Farbwert 0 - 360)
+        if ($delta == 0) {
+            $h = 0; // Weiß/Graustufe, kein messbarer Farbton
+        } elseif ($max == $r) {
+            $h = 60 * fmod((($g - $b) / $delta), 6);
+        } elseif ($max == $g) {
+            $h = 60 * ((($b - $r) / $delta) + 2);
+        } else {
+            $h = 60 * ((($r - $g) / $delta) + 4);
+        }
+        if ($h < 0) {
+            $h += 360;
+        }
+
+        // 2. Saturation (Sättigung 0.0 - 1.0)
+        $s = ($max == 0) ? 0 : ($delta / $max);
+
+        // 3.Value (Helligkeit 0 - 100)
+        if ($brightness < 0) {
+            $v = 0;
+        } elseif ($brightness > 100) {
+            $v = 100;
+        } else {
+            $v = $brightness;
+        }
+
+        return [
+            'H' => (int) round($h),
+            'S' => (int) round($s * 100),
+            'V' => (int) $brightness,
+        ];
+    }
+
+    public function Kelvin2RGB(int $kelvin)
+    {
+        // Eingrenzung auf den sinnvollen Bereich des Algorithmus
+        $kelvin = max(1000, min(40000, $kelvin));
+        $temp = $kelvin / 100;
+
+        // Rot berechnen
+        if ($temp <= 66) {
+            $r = 255;
+        } else {
+            $r = $temp - 60;
+            $r = 329.698727446 * pow($r, -0.1332047592);
+            $r = max(0, min(255, $r));
+        }
+
+        // Grün berechnen
+        if ($temp <= 66) {
+            $g = $temp;
+            $g = 99.4708025861 * log($g) - 161.1195681661;
+            $g = max(0, min(255, $g));
+        } else {
+            $g = $temp - 60;
+            $g = 288.1221695283 * pow($g, -0.0755148492);
+            $g = max(0, min(255, $g));
+        }
+
+        // Blau berechnen
+        if ($temp >= 66) {
+            $b = 255;
+        } else {
+            if ($temp <= 19) {
+                $b = 0;
+            } else {
+                $b = $temp - 10;
+                $b = 138.5177312231 * log($b) - 305.0447927307;
+                $b = max(0, min(255, $b));
+            }
+        }
+
+        return [
+            'R' => (int) round($r),
+            'G' => (int) round($g),
+            'B' => (int) round($b)
+        ];
+    }
+
+    // Kelvin in RGBW umrechnen
+    public function Kelvin2RGBW(int $kelvin)
+    {
+        $rgb = $this->Kelvin2RGB($kelvin);
+        $rgbw = $this->RGB2RGBW($rgb['R'], $rgb['G'], $rgb['B']);
+
+        return $rgbw;
+    }
+
+    // RGB in HSV umrechnen
+    public function RGB2HSV(int $r, int $g, int $b)
+    {
+        // 1. Werte auf den Bereich 0-1 normalisieren
+        $rNormal = $r / 255;
+        $gNormal = $g / 255;
+        $bNormal = $b / 255;
+
+        // 2. Maximum, Minimum und die Differenz (Delta) bestimmen
+        $cMax = max($rNormal, $gNormal, $bNormal);
+        $cMin = min($rNormal, $gNormal, $bNormal);
+        $delta = $cMax - $cMin;
+
+        // 3. Farbton (H) berechnen
+        $h = 0;
+        if ($delta != 0) {
+            if ($cMax == $rNormal) {
+                $h = 60 * fmod((($gNormal - $bNormal) / $delta), 6);
+            } elseif ($cMax == $gNormal) {
+                $h = 60 * ((($bNormal - $rNormal) / $delta) + 2);
+            } elseif ($cMax == $bNormal) {
+                $h = 60 * ((($rNormal - $gNormal) / $delta) + 4);
+            }
+
+            // Negative Winkel korrigieren
+            if ($h < 0) {
+                $h += 360;
+            }
+        }
+
+        // 4. Sättigung (S) berechnen
+        $s = ($cMax == 0) ? 0 : ($delta / $cMax) * 100;
+
+        // 5. Helligkeit / Wert (V) berechnen
+        $v = $cMax * 100;
+
+        // Werte runden und als Array zurückgeben
+        return [
+            'H' => (int) round($h),
+            'S' => (int) round($s),
+            'V' => (int) round($v),
+        ];
+    }
+
+    public function RGB2Kelvin(int $r, int $g, int $b)
+    {
+        // 1. Normalisierung auf den Bereich 0.0 - 1.0
+        $r = $r / 255.0;
+        $g = $g / 255.0;
+        $b = $b / 255.0;
+
+        // Gamma-Korrektur (sRGB in lineares RGB umwandeln)
+        $r = ($r > 0.04045) ? pow(($r + 0.055) / 1.055, 2.4) : ($r / 12.92);
+        $g = ($g > 0.04045) ? pow(($g + 0.055) / 1.055, 2.4) : ($g / 12.92);
+        $b = ($b > 0.04045) ? pow(($b + 0.055) / 1.055, 2.4) : ($b / 12.92);
+
+        // 2. Umrechnung in den CIE XYZ Farbraum
+        $x = $r * 0.4124 + $g * 0.3576 + $b * 0.1805;
+        $y = $r * 0.2126 + $g * 0.7152 + $b * 0.0722;
+        $z = $r * 0.0193 + $g * 0.1192 + $b * 0.9505;
+
+        // Schutz vor Division durch Null
+        if (($x + $y + $z) == 0) {
+            return false;
+        }
+
+        // 3. Berechnung der CIE xy-Koordinaten
+        $cieX = $x / ($x + $y + $z);
+        $cieY = $y / ($x + $y + $z);
+
+        // 4. McCamy-Formel zur Schätzung von Kelvin
+        // Epizentrum für die Kurve (nach McCamy)
+        $xe = 0.3320;
+        $ye = 0.1858;
+
+        $n = ($cieX - $xe) / ($ye - $cieY);
+
+        // Polynom-Berechnung
+        $kelvin = 449.0 * pow($n, 3) + 3525.0 * pow($n, 2) + 6823.3 * $n + 5520.33;
+
+        // Kelvin-Werte machen physikalisch meist nur zwischen 1.000K und 15.000K Sinn
+        if ($kelvin < 0 || $kelvin > 15000) {
+            return false;
+        }
+
+        return (int) round($kelvin);
+    }
+
+    public function HSV2Kelvin(float $h, float $s, float $v)
+    {
+        $rgb = $this->HSV2RGB($h, $s, $v);
+        $kelvin = $this->RGB2Kelvin($rgb['R'], $rgb['G'], $rgb['B']);
+
+        return (int) $kelvin;
+    }
+
+    public function Val2RGB(int $val)
+    {
+        return [
+            'R' => ($val >> 16) & 0xFF,
+            'G' => ($val >> 8) & 0xFF,
+            'B' => $val & 0xFF,
+        ];
+    }
+
+    public function RGB2Val(int $r, int $g, int $b)
+    {
+        return ($r << 16) | ($g << 8) | $b;
     }
 }

@@ -49,9 +49,9 @@ class HmIPWRCD extends IPSModule
         $this->RegisterPropertyInteger('delay_before', 5);
         $this->RegisterPropertyInteger('pause_between', 5);
 
-        $this->RegisterAttributeString('parameter', '');
+        $this->RegisterAttributeString('parameter', json_encode([]));
         $this->RegisterAttributeInteger('step', self::$STEP_NEW);
-        $this->RegisterAttributeString('last_parameter', '');
+        $this->RegisterAttributeString('last_parameter', json_encode([]));
 
         $this->RegisterAttributeString('UpdateInfo', json_encode([]));
         $this->RegisterAttributeString('ModuleStats', json_encode([]));
@@ -580,7 +580,7 @@ class HmIPWRCD extends IPSModule
             $this->SendDebug(__FUNCTION__, $msg, 0);
             $this->LogMessage(__FUNCTION__ . ': ' . $msg, KL_NOTIFY);
             $this->WriteAttributeInteger('step', self::$STEP_FAIL);
-            $this->WriteAttributeString('last_parameter', '');
+            $this->WriteAttributeString('last_parameter', json_encode([]));
         } else {
             $msg = 'HM_WriteValueString(' . $instID . ', \'' . $ident . '\', ' . $paramS . ') succed';
             $this->SendDebug(__FUNCTION__, $msg, 0);
