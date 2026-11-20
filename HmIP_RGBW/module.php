@@ -38,7 +38,13 @@ class HmIPRGBW extends IPSModule
         $this->RegisterPropertyInteger('chan0_instID', 0);
         $this->RegisterPropertyInteger('chan1_instID', 0);
 
-        $this->RegisterAttributeString('wake_up_light', json_encode([]));
+        $this->RegisterPropertyInteger('wakeup_light_variant', 1);
+        $this->RegisterPropertyInteger('wakeup_light_duration', 30);
+        $this->RegisterPropertyInteger('wakeup_light_step_delay', 30);
+        $this->RegisterPropertyInteger('wakeup_light_min_brightness', 1);
+        $this->RegisterPropertyInteger('wakeup_light_max_brightness', 100);
+
+        $this->RegisterAttributeString('wakeup_light_params', json_encode([]));
 
         $this->RegisterAttributeString('UpdateInfo', json_encode([]));
         $this->RegisterAttributeString('ModuleStats', json_encode([]));
@@ -101,27 +107,31 @@ class HmIPRGBW extends IPSModule
 
         if ($this->CheckPrerequisites() != false) {
             $this->MaintainTimer('TimerWakeUpLight', 0);
-            $this->WriteAttributeString('wake_up_light', json_encode([]));
+            $this->WriteAttributeString('wakeup_light_params', json_encode([]));
             $this->MaintainStatus(self::$IS_INVALIDPREREQUISITES);
             return;
         }
 
         if ($this->CheckUpdate() != false) {
             $this->MaintainTimer('TimerWakeUpLight', 0);
-            $this->WriteAttributeString('wake_up_light', json_encode([]));
+            $this->WriteAttributeString('wakeup_light_params', json_encode([]));
             $this->MaintainStatus(self::$IS_UPDATEUNCOMPLETED);
             return;
         }
 
         if ($this->CheckConfiguration() != false) {
             $this->MaintainTimer('TimerWakeUpLight', 0);
-            $this->WriteAttributeString('wake_up_light', json_encode([]));
+            $this->WriteAttributeString('wakeup_light_params', json_encode([]));
             $this->MaintainStatus(self::$IS_INVALIDCONFIG);
             return;
         }
 
         $vpos = 1;
 
+        $this->MaintainVariable('Power', $this->Translate('Power'), VARIABLETYPE_BOOLEAN, '~Switch', $vpos++, true);
+        $this->MaintainAction('Power', true);
+        $this->MaintainVariable('Brightness', $this->Translate('Brightness'), VARIABLETYPE_FLOAT, '~Intensity.1', $vpos++, true);
+        $this->MaintainAction('Brightness', true);
         $this->MaintainVariable('Color', $this->Translate('Color'), VARIABLETYPE_INTEGER, '~HexColor', $vpos++, true);
         $this->MaintainAction('Color', true);
         $this->MaintainVariable('ColorTemp', $this->Translate('Color temperatur'), VARIABLETYPE_INTEGER, 'HmIPRGBW.Kelvin', $vpos++, true);
@@ -130,7 +140,7 @@ class HmIPRGBW extends IPSModule
         $module_disable = $this->ReadPropertyBoolean('module_disable');
         if ($module_disable) {
             $this->MaintainTimer('TimerWakeUpLight', 0);
-            $this->WriteAttributeString('wake_up_light', json_encode([]));
+            $this->WriteAttributeString('wakeup_light_params', json_encode([]));
             $this->MaintainStatus(IS_INACTIVE);
             return;
         }
@@ -165,23 +175,82 @@ class HmIPRGBW extends IPSModule
         ];
 
         $formElements[] = [
-            'type'         => 'RowLayout',
+            'type'         => 'ExpansionPanel',
+            'caption'      => 'Homematic instances',
+            'expanded'     => true,
             'items'        => [
-                [
-                    'type'         => 'Label',
-                    'caption'      => 'Homematic instances',
-                ],
                 [
                     'type'         => 'SelectInstance',
                     'validModules' => ['{EE4A81C6-5C90-4DB7-AD2F-F6BBD521412E}'],
+                    'width'        => '50%',
                     'name'         => 'chan1_instID',
                     'caption'      => 'Channel 1'
                 ],
                 [
                     'type'         => 'SelectInstance',
                     'validModules' => ['{EE4A81C6-5C90-4DB7-AD2F-F6BBD521412E}'],
+                    'width'        => '50%',
                     'name'         => 'chan0_instID',
                     'caption'      => 'Channel 0'
+                ],
+            ],
+        ];
+
+        $formElements[] = [
+            'type'         => 'ExpansionPanel',
+            'caption'      => 'Wakeup light',
+            'expanded'     => true,
+            'items'        => [
+                [
+                    'type'     => 'Select',
+                    'name'     => 'wakeup_light_variant',
+                    'caption'  => 'Variant',
+                    'options'  => [
+                        [
+                            'caption' => '1',
+                            'value'   => 1,
+                        ],
+                        [
+                            'caption' => '2',
+                            'value'   => 2,
+                        ],
+                        [
+                            'caption' => '3',
+                            'value'   => 3,
+                        ],
+                    ],
+                ],
+                [
+                    'type'    => 'NumberSpinner',
+                    'name'    => 'wakeup_light_duration',
+                    'minumum' => 1,
+                    'maximum' => 60,
+                    'auffix'  => 'Minutes',
+                    'caption' => 'Duration'
+                ],
+                [
+                    'type'    => 'NumberSpinner',
+                    'name'    => 'wakeup_light_step_delay',
+                    'minumum' => 1,
+                    'maximum' => 60,
+                    'auffix'  => 'Seconds',
+                    'caption' => 'Step delay'
+                ],
+                [
+                    'type'    => 'NumberSpinner',
+                    'name'    => 'wakeup_light_min_brightness',
+                    'minumum' => 0,
+                    'maximum' => 100,
+                    'auffix'  => '%',
+                    'caption' => 'Minimum brightness'
+                ],
+                [
+                    'type'    => 'NumberSpinner',
+                    'name'    => 'wakeup_light_max_brightness',
+                    'minumum' => 0,
+                    'maximum' => 100,
+                    'auffix'  => '%',
+                    'caption' => 'Maximum brightness'
                 ],
             ],
         ];
@@ -261,6 +330,14 @@ class HmIPRGBW extends IPSModule
 
         $r = false;
         switch ($ident) {
+            case 'Power':
+                $r = $this->SetPower((bool) $value);
+                $this->SendDebug(__FUNCTION__, $ident . '=' . $value . ' => ret=' . $this->bool2str($r), 0);
+                break;
+            case 'Brightness':
+                $r = $this->SetBrightness((float) $value);
+                $this->SendDebug(__FUNCTION__, $ident . '=' . $value . ' => ret=' . $this->bool2str($r), 0);
+                break;
             case 'Color':
                 $r = $this->SetColor((int) $value);
                 $this->SendDebug(__FUNCTION__, $ident . '=' . $value . ' => ret=' . $this->bool2str($r), 0);
@@ -278,34 +355,56 @@ class HmIPRGBW extends IPSModule
         }
     }
 
-    private function SyncFromDevice()
+    private function RetrieveActiveHSV()
     {
         $instID = $this->ReadPropertyInteger('chan1_instID');
 
         @$varID = IPS_GetObjectIDByIdent('HUE', $instID);
         if ($varID == false) {
             $this->SendDebug(__FUNCTION__, 'device-variable "HUE" missing', 0);
-            return;
+            return false;
         }
         $h = GetValue($varID);
 
         @$varID = IPS_GetObjectIDByIdent('SATURATION', $instID);
         if ($varID == false) {
             $this->SendDebug(__FUNCTION__, 'device-variable "SATURATION" missing', 0);
-            return;
+            return false;
         }
         $s = (int) (GetValue($varID) * 100);
 
         @$varID = IPS_GetObjectIDByIdent('LEVEL', $instID);
         if ($varID == false) {
             $this->SendDebug(__FUNCTION__, 'device-variable "LEVEL" missing', 0);
-            return;
+            return false;
         }
         $v = (int) (GetValue($varID) * 100);
 
-        $rgb = $this->HSV2RGB($h, $s, $v);
+        return [
+            'H' => $h,
+            'S' => $s,
+            'V' => $v,
+        ];
+    }
 
-        $this->SendDebug(__FUNCTION__, 'H=' . $h . ', S=' . $s . ', V=' . $v . ' => R=' . $rgb['R'] . ', G=' . $rgb['G'] . ', B=' . $rgb['B'], 0);
+    private function SyncFromDevice()
+    {
+        $hsv = $this->RetrieveActiveHSV();
+        if ($hsv == false) {
+            return;
+        }
+        $rgb = $this->HSV2RGB($hsv['H'], $hsv['S'], $hsv['V']);
+
+        $this->SendDebug(__FUNCTION__, 'H=' . $hsv['H'] . ', S=' . $hsv['S'] . ', V=' . $hsv['V'] . ' => R=' . $rgb['R'] . ', G=' . $rgb['G'] . ', B=' . $rgb['B'], 0);
+
+        $l = $hsv['V'] / 100;
+        if ($l != $this->GetValue('Brightness')) {
+            $this->SetValue('Brightness', $l);
+        }
+        $p = $l > 0;
+        if ($p != $this->GetValue('Power')) {
+            $this->SetValue('Power', $p);
+        }
 
         $c = $this->RGB2Val($rgb['R'], $rgb['G'], $rgb['B']);
         if ($c != $this->GetValue('Color')) {
@@ -318,6 +417,120 @@ class HmIPRGBW extends IPSModule
         }
     }
 
+    public function SetPower(bool $val)
+    {
+        if ($this->CheckStatus() == self::$STATUS_INVALID) {
+            $this->SendDebug(__FUNCTION__, $this->GetStatusText() . ' => skip', 0);
+            return false;
+        }
+
+        if (IPS_SemaphoreEnter($this->SemaphoreID, $this->SemaphoreTM) == false) {
+            $this->SendDebug(__FUNCTION__, 'unable to lock sempahore ' . $this->SemaphoreID, 0);
+            return false;
+        }
+
+        $level = $val ? 100 : 0;
+        $ramp_time = 0;
+
+        $paramV = @json_decode((string) $this->ReadAttributeString('wakeup_light_params'), true);
+        $step = (int) $this->GetArrayElem($paramV, 'step', 0);
+        if ($step > 0) {
+            $this->WriteAttributeString('wakeup_light_params', json_encode([]));
+            $this->MaintainTimer('TimerWakeUpLight', 0);
+        }
+
+        IPS_SemaphoreLeave($this->SemaphoreID);
+
+        if ($step > 0) {
+            $this->SendDebug(__FUNCTION__, 'interrupted WakeUpLight', 0);
+
+            $msg = 'interrupted WakeUpLight';
+            $this->AddModuleActivity($msg, self::$ModuleActivityLines);
+        }
+
+        $instID = $this->ReadPropertyInteger('chan1_instID');
+        $ident = 'COMBINED_PARAMETER';
+
+        $paramV = [
+            'L=' . $level,			// Helligkeit
+            'OT=0',					// Einschaltzeit
+            'RT=' . $ramp_time,		// Rampenzeit beim Einschalten (sec)
+            'RTTOV=0',				// Rampenzeit beim Ausschalten
+            'RTTOU=0',				// Einheit von RTTOV (0=sec, 1=min, 3=msec)
+        ];
+        $paramS = implode(',', $paramV);
+
+        $r = @HM_WriteValueString($instID, $ident, $paramS);
+        if ($r == false) {
+            $msg = 'HM_WriteValueString(' . $instID . ', \'' . $ident . '\', ' . $paramS . ') failed';
+            $this->SendDebug(__FUNCTION__, $msg, 0);
+            return false;
+        } else {
+            $msg = 'HM_WriteValueString(' . $instID . ', \'' . $ident . '\', ' . $paramS . ') succed';
+            $this->SendDebug(__FUNCTION__, $msg, 0);
+            return true;
+        }
+
+        return $r;
+    }
+
+    public function SetBrightness(float $val)
+    {
+        if ($this->CheckStatus() == self::$STATUS_INVALID) {
+            $this->SendDebug(__FUNCTION__, $this->GetStatusText() . ' => skip', 0);
+            return false;
+        }
+
+        if (IPS_SemaphoreEnter($this->SemaphoreID, $this->SemaphoreTM) == false) {
+            $this->SendDebug(__FUNCTION__, 'unable to lock sempahore ' . $this->SemaphoreID, 0);
+            return false;
+        }
+
+        $level = $val * 100;
+        $ramp_time = 0;
+
+        $paramV = @json_decode((string) $this->ReadAttributeString('wakeup_light_params'), true);
+        $step = (int) $this->GetArrayElem($paramV, 'step', 0);
+        if ($step > 0) {
+            $this->WriteAttributeString('wakeup_light_params', json_encode([]));
+            $this->MaintainTimer('TimerWakeUpLight', 0);
+        }
+
+        IPS_SemaphoreLeave($this->SemaphoreID);
+
+        if ($step > 0) {
+            $this->SendDebug(__FUNCTION__, 'interrupted WakeUpLight', 0);
+
+            $msg = 'interrupted WakeUpLight';
+            $this->AddModuleActivity($msg, self::$ModuleActivityLines);
+        }
+
+        $instID = $this->ReadPropertyInteger('chan1_instID');
+        $ident = 'COMBINED_PARAMETER';
+
+        $paramV = [
+            'L=' . $level,			// Helligkeit
+            'OT=0',					// Einschaltzeit
+            'RT=' . $ramp_time,		// Rampenzeit beim Einschalten (sec)
+            'RTTOV=0',				// Rampenzeit beim Ausschalten
+            'RTTOU=0',				// Einheit von RTTOV (0=sec, 1=min, 3=msec)
+        ];
+        $paramS = implode(',', $paramV);
+
+        $r = @HM_WriteValueString($instID, $ident, $paramS);
+        if ($r == false) {
+            $msg = 'HM_WriteValueString(' . $instID . ', \'' . $ident . '\', ' . $paramS . ') failed';
+            $this->SendDebug(__FUNCTION__, $msg, 0);
+            return false;
+        } else {
+            $msg = 'HM_WriteValueString(' . $instID . ', \'' . $ident . '\', ' . $paramS . ') succed';
+            $this->SendDebug(__FUNCTION__, $msg, 0);
+            return true;
+        }
+
+        return $r;
+    }
+
     public function SetColor(int $val)
     {
         if ($this->CheckStatus() == self::$STATUS_INVALID) {
@@ -327,7 +540,7 @@ class HmIPRGBW extends IPSModule
 
         $rgb = $this->Val2RGB($val);
         $hsv = $this->RGB2HSV($rgb['R'], $rgb['G'], $rgb['B']);
-        $r = $this->SendCombinedParameter($hsv['V'], $hsv['H'], $hsv['S']);
+        $r = $this->TransmitHSV($hsv['V'], $hsv['H'], $hsv['S'], 0);
 
         return $r;
     }
@@ -348,12 +561,12 @@ class HmIPRGBW extends IPSModule
         }
 
         $hsv = $this->Kelvin2HSV($val, $level);
-        $r = $this->SendCombinedParameter($hsv['V'], $hsv['H'], $hsv['S']);
+        $r = $this->TransmitHSV($hsv['V'], $hsv['H'], $hsv['S'], 0);
 
         return $r;
     }
 
-    public function SendCombinedParameter(int $level, int $hue, int $saturation)
+    private function TransmitHSV(int $level, int $hue, int $saturation, int $ramp_time)
     {
         if ($this->CheckStatus() == self::$STATUS_INVALID) {
             $this->SendDebug(__FUNCTION__, $this->GetStatusText() . ' => skip', 0);
@@ -361,31 +574,30 @@ class HmIPRGBW extends IPSModule
         }
 
         if ($level < 0 || $level > 100) {
-            $this->SendDebug(__FUNCTION__, 'level $level ist not between 0..100 %', 0);
+            $this->SendDebug(__FUNCTION__, 'level $level is not between 0..100 %', 0);
             return false;
         }
         if ($hue < 0 || $hue > 360) {
-            $this->SendDebug(__FUNCTION__, 'hue $hue ist not between 0..360 °', 0);
+            $this->SendDebug(__FUNCTION__, 'hue $hue is not between 0..360 °', 0);
             return false;
         }
         if ($saturation < 0 || $saturation > 100) {
-            $this->SendDebug(__FUNCTION__, 'saturation $saturation ist not between 0..100 %', 0);
+            $this->SendDebug(__FUNCTION__, 'saturation $saturation is not between 0..100 %', 0);
             return false;
         }
 
         $instID = $this->ReadPropertyInteger('chan1_instID');
         $ident = 'COMBINED_PARAMETER';
 
-        $paramV = [];
-        $paramV[] = 'L=' . $level;
-        $paramV[] = 'H=' . $hue;
-        $paramV[] = 'SAT=' . $saturation;
-
-        $paramV[] = 'OT=0'; // Einschaltzeit
-        $paramV[] = 'RT=0'; // Zampenzeit (Sec)
-        $paramV[] = 'RTTOV=0'; // Rampen-Ausschaltzeit
-        $paramV[] = 'RTTOU=0'; // Einheit von RTTOV (0=sec, 1=min, 3=msec)
-
+        $paramV = [
+            'L=' . $level,			// Helligkeit
+            'H=' . $hue,			// Farbwert
+            'SAT=' . $saturation,	// Sättigung
+            'OT=0',					// Einschaltzeit
+            'RT=' . $ramp_time,		// Rampenzeit beim Einschalten (sec)
+            'RTTOV=0',				// Rampenzeit beim Ausschalten
+            'RTTOU=0',				// Einheit von RTTOV (0=sec, 1=min, 3=msec)
+        ];
         $paramS = implode(',', $paramV);
 
         $r = @HM_WriteValueString($instID, $ident, $paramS);
@@ -402,7 +614,7 @@ class HmIPRGBW extends IPSModule
 
     // Berechnung eines Lichtwecker-Schrittes im HSV-Farbraum und RGBW-Werten
     // progress 0..1
-    public function calcLightWakeupStep(float $progress)
+    private function UNUSED_calcLightWakeupStep(float $progress)
     {
         // Grenzen absichern
         $progress = max(0.0, min(1.0, $progress));
@@ -429,52 +641,116 @@ class HmIPRGBW extends IPSModule
         ];
     }
 
-    public function calculateSunrise(float $progress, float $maxBrightness = 1.0)
+    private function calculateSunrise(float $progress, float $minBrightness, float $maxBrightness)
     {
         // 1. Eingrenzung des Fortschritts zur Sicherheit
         $progress = max(0.0, min(1.0, $progress));
+
         $maxBrightness = max(0.0, min(1.0, round($maxBrightness / 100)));
+        $minBrightness = max(0.01, min($maxBrightness, round($minBrightness / 100)));
+        // Falls das gewünschte Maximum unter dem Minimum liegt, passen wir das Minimum an
+        if ($minBrightness >= $maxBrightness) {
+            $minBrightness = $maxBrightness * 0.2;
+        }
 
-        // 2. Nicht-lineare Kurve für die Helligkeit (Value) verwenden (Quadratischer Anstieg)
-        // Das sorgt dafür, dass es am Anfang sehr sanft hell wird.
-        // maxBrightness begrenzt die Helligkeit
-        if ($progress == 0.0 || $maxBrightness == 0.0) {
-            $v = 0.0;
-        } else {
-            $minBrightness = 0.04; // Startet sofort bei ca. 4% Helligkeit
+        $variant = $this->ReadPropertyInteger('wakeup_light_variant');
+        if ($variant == 1) {
+            // 2. Nicht-lineare Kurve für die Helligkeit (Value) verwenden (Quadratischer Anstieg)
+            // Das sorgt dafür, dass es am Anfang sehr sanft hell wird.
+            // maxBrightness begrenzt die Helligkeit
+            if ($progress == 0.0 || $maxBrightness == 0.0) {
+                $v = 0.0;
+            } else {
+                // Mathematische Mischkurve für den sanften Verlauf (0.0 bis 1.0)
+                $kurve = (0.4 * $progress) + (0.6 * pow($progress, 2));
 
-            // Falls das gewünschte Maximum unter dem Minimum liegt, passen wir das Minimum an
-            if ($minBrightness >= $maxBrightness) {
-                $minBrightness = $maxBrightness * 0.2;
+                // Skalierung exakt ZWISCHEN dem Minimum und dem dynamischen Maximum
+                $v = $minBrightness + ($kurve * ($maxBrightness - $minBrightness));
             }
 
-            // Mathematische Mischkurve für den sanften Verlauf (0.0 bis 1.0)
-            $kurve = (0.4 * $progress) + (0.6 * pow($progress, 2));
+            // 3. Berechnung des Farbtons (Hue: 0 - 360)
+            // Pfad: Nachtblau (240°) -> Rot (360°/0°) -> Orange (30°) -> Gelb/Warmweiß (55°)
+            if ($progress < 0.4) {
+                // Erste Phase (Dämmerung): Von Blau (240°) fließend zu reinem Rot (360°)
+                $norm = $progress / 0.4;
+                $h = 240 + ($norm * 120);
+            } else {
+                // Zweite Phase (Aufgang): Von Rot (0°) zu Sonnengelb/Warmweiß (55°)
+                $norm = ($progress - 0.4) / 0.6;
+                $h = 0 + ($norm * 55);
+            }
 
-            // Skalierung exakt ZWISCHEN dem Minimum und dem dynamischen Maximum
-            $v = $minBrightness + ($kurve * ($maxBrightness - $minBrightness));
+            // 4. Berechnung der Sättigung (Saturation: 0.0 - 1.0)
+            // Bleibt am Anfang hoch für kräftige Dämmerungsfarben und fällt am Ende ab
+            if ($progress < 0.6) {
+                $s = 1.0;
+            } else {
+                // Entsättigung am Ende für helles, weißeres Licht
+                $norm = ($progress - 0.6) / 0.4;
+                $s = 1.0 - ($norm * 0.65); // Endet bei ca. 0.35 Sättigung
+            }
         }
+        if ($variant == 2) {
+            // 2. Nicht-lineare Kurve für die Helligkeit (Value) verwenden (Quadratischer Anstieg)
+            if ($progress == 0.0 || $maxBrightness == 0.0) {
+                $v = 0.0;
+            } else {
+                $kurve = (0.4 * $progress) + (0.6 * pow($progress, 2));
+                $v = $minBrightness + ($kurve * ($maxBrightness - $minBrightness));
+            }
 
-        // 3. Berechnung des Farbtons (Hue: 0 - 360)
-        // Pfad: Nachtblau (240°) -> Rot (360°/0°) -> Orange (30°) -> Gelb/Warmweiß (55°)
-        if ($progress < 0.4) {
-            // Erste Phase (Dämmerung): Von Blau (240°) fließend zu reinem Rot (360°)
-            $norm = $progress / 0.4;
-            $h = 240 + ($norm * 120);
-        } else {
-            // Zweite Phase (Aufgang): Von Rot (0°) zu Sonnengelb/Warmweiß (55°)
-            $norm = ($progress - 0.4) / 0.6;
-            $h = 0 + ($norm * 55);
+            // 3. Berechnung des Farbtons (Hue: 0 - 360) - FIX: Nahtloser Übergang über 360° hinaus
+            if ($progress < 0.4) {
+                // Erste Phase: Von Blau (240°) zu reinem Rot (360°)
+                $norm = $progress / 0.4;
+                $h = 240 + ($norm * 120);
+            } else {
+                // Zweite Phase: Von Rot (360°) weiter zu Sonnengelb (360° + 55° = 415°)
+                $norm = ($progress - 0.4) / 0.6;
+                $h = 360 + ($norm * 55);
+            }
+            // Normalisierung auf 0-360 Grad für die HSV-Funktion
+            $h = fmod($h, 360.0);
+
+            // 4. Berechnung der Sättigung (Saturation: 0.0 - 1.0)
+            if ($progress < 0.6) {
+                $s = 1.0;
+            } else {
+                $norm = ($progress - 0.6) / 0.4;
+                $s = 1.0 - ($norm * 0.65); // Endet bei ca. 0.35 Sättigung
+            }
         }
+        if ($variant == 3) {
+            // 2. Nicht-lineare Kurve für die Helligkeit (Value) verwenden (Quadratischer Anstieg)
+            if ($progress == 0.0 || $maxBrightness == 0.0) {
+                $v = 0.0;
+            } else {
+                $kurve = (0.4 * $progress) + (0.6 * pow($progress, 2));
+                $v = $minBrightness + ($kurve * ($maxBrightness - $minBrightness));
+            }
 
-        // 4. Berechnung der Sättigung (Saturation: 0.0 - 1.0)
-        // Bleibt am Anfang hoch für kräftige Dämmerungsfarben und fällt am Ende ab
-        if ($progress < 0.6) {
-            $s = 1.0;
-        } else {
-            // Entsättigung am Ende für helles, weißeres Licht
-            $norm = ($progress - 0.6) / 0.4;
-            $s = 1.0 - ($norm * 0.65); // Endet bei ca. 0.35 Sättigung
+            // 3. Berechnung des Farbtons (Hue: 0 - 360)
+            // Pfad: Nachtblau (240°) -> Sattes, warmes Rot (370° / entspricht 10°) -> Sonnengelb (415° / entspricht 55°)
+            if ($progress < 0.4) {
+                // Erste Phase (Dämmerung): Von Blau (240°) zu einem warmen, satten Rot (370°)
+                // Das bricht den Blaustich komplett und führt zu einem sauberen Übergang.
+                $norm = $progress / 0.4;
+                $h = 240 + ($norm * 130); // 240 + 130 = 370° (entspricht 10° im HSV-Kreis)
+            } else {
+                // Zweite Phase (Aufgang): Vom warmen Rot (370°) zu Sonnengelb/Warmweiß (415°)
+                $norm = ($progress - 0.4) / 0.6;
+                $h = 370 + ($norm * 45); // Endet bei 415° (entspricht 55° im HSV-Kreis)
+            }
+            // Normalisierung auf 0-360 Grad für die HSV-Funktion
+            $h = fmod($h, 360.0);
+
+            // 4. Berechnung der Sättigung (Saturation: 0.0 - 1.0)
+            if ($progress < 0.6) {
+                $s = 1.0;
+            } else {
+                $norm = ($progress - 0.6) / 0.4;
+                $s = 1.0 - ($norm * 0.65); // Endet bei ca. 0.35 Sättigung
+            }
         }
 
         return [
@@ -484,7 +760,7 @@ class HmIPRGBW extends IPSModule
         ];
     }
 
-    public function StartWakeUpLight(int $minutes, int $target_brightness)
+    public function StartWakeUpLight()
     {
         if ($this->CheckStatus() == self::$STATUS_INVALID) {
             $this->SendDebug(__FUNCTION__, $this->GetStatusText() . ' => skip', 0);
@@ -496,7 +772,7 @@ class HmIPRGBW extends IPSModule
             return false;
         }
 
-        $paramV = @json_decode((string) $this->ReadAttributeString('wake_up_light'), true);
+        $paramV = @json_decode((string) $this->ReadAttributeString('wakeup_light_params'), true);
         $step = (int) $this->GetArrayElem($paramV, 'step', 0);
         if ($step > 0) {
             IPS_SemaphoreLeave($this->SemaphoreID);
@@ -507,52 +783,70 @@ class HmIPRGBW extends IPSModule
 
         $step = 0;
         $start_ts = time();
-        $duration = $minutes * 60;
-        $step_duration = 30;
-        $n_steps = round($duration / $step_duration);
+        $duration = $this->ReadPropertyInteger('wakeup_light_duration') * 60;
+        $step_delay = $this->ReadPropertyInteger('wakeup_light_step_delay');
+        $n_steps = round($duration / $step_delay);
+        $min_brightness = $this->ReadPropertyInteger('wakeup_light_min_brightness');
+        $max_brightness = $this->ReadPropertyInteger('wakeup_light_max_brightness');
+        if ($min_brightness == 0) {
+            $min_brightness = 1;
+        }
+        if ($max_brightness == 0) {
+            $max_brightness = 100;
+        }
+        if ($max_brightness < $min_brightness) {
+            $min_brightness = $max_brightness;
+        }
 
         $paramV = [
             'step'              => $step,
             'start_ts'          => $start_ts,
             'duration'          => $duration,
-            'step_duration'     => $step_duration,
+            'step_delay'        => $step_delay,
             'n_steps'           => $n_steps,
-            'target_brightness' => $target_brightness,
+            'min_brightness'    => $min_brightness,
+            'max_brightness'    => $max_brightness,
         ];
 
-        $this->WriteAttributeString('wake_up_light', json_encode($paramV));
+        $this->WriteAttributeString('wakeup_light_params', json_encode($paramV));
 
-        $secs = $step * $step_duration;
+        $secs = $step * $step_delay;
         $progress = $secs > 0 ? $secs / $duration : 0;
+        $ramp_time = $step_delay - 1;
 
-        $hsv = $this->calculateSunrise($progress, $target_brightness);
-        $r = $this->SendCombinedParameter($hsv['V'], $hsv['H'], $hsv['S']);
-        $this->SendDebug(__FUNCTION__, 'step=' . $step . ', progress=' . ($progress * 100) . '%, hsv=' . print_r($hsv, true) . ', SendCombinedParameter() ' . ($r ? 'succeeded' : 'failed'), 0);
+        $hsv = $this->calculateSunrise($progress, $min_brightness, $max_brightness);
+        $r = $this->TransmitHSV($hsv['V'], $hsv['H'], $hsv['S'], $ramp_time);
         if ($r) {
+            $st = 'transmission succeeded';
             $paramV['hsv'] = $hsv;
+        } else {
+            $st = 'transmission failed';
         }
+        $_progress = round($progress * 100, 0);
+        $this->SendDebug(__FUNCTION__, 'step=' . $step . ', progress=' . $_progress . '%, H=' . $hsv['H'] . ', S=' . $hsv['S'] . ', V=' . $hsv['V'] . ', ' . $st, 0);
 
         $step++;
         $paramV['step'] = $step;
-        $this->WriteAttributeString('wake_up_light', json_encode($paramV));
+        $this->WriteAttributeString('wakeup_light_params', json_encode($paramV));
 
-        $delay = $start_ts + ($step * $step_duration) - time();
+        $delay = $start_ts + ($step * $step_delay) - time();
         if ($delay <= 0) {
-            $delay = $step_duration;
+            $delay = $step_delay;
         }
         $this->MaintainTimer('TimerWakeUpLight', $delay * 1000);
 
-        $msg = 'start WakeUpLight with H=' . $hsv['H'] . ', S=' . $hsv['S'] . ', L=' . $hsv['V'];
+        IPS_SemaphoreLeave($this->SemaphoreID);
+
+        $msg = 'start WakeUpLight with H=' . $hsv['H'] . ', S=' . $hsv['S'] . ', V=' . $hsv['V'];
         if ($r == false) {
             $msg .= ', transmission failed';
         }
         $this->AddModuleActivity($msg, self::$ModuleActivityLines);
 
-        IPS_SemaphoreLeave($this->SemaphoreID);
         return true;
     }
 
-    public function LoopWakeUpLight()
+    private function LoopWakeUpLight()
     {
         if ($this->CheckStatus() == self::$STATUS_INVALID) {
             $this->SendDebug(__FUNCTION__, $this->GetStatusText() . ' => skip', 0);
@@ -564,10 +858,10 @@ class HmIPRGBW extends IPSModule
             return false;
         }
 
-        $paramV = @json_decode((string) $this->ReadAttributeString('wake_up_light'), true);
+        $paramV = @json_decode((string) $this->ReadAttributeString('wakeup_light_params'), true);
         $step = (int) $this->GetArrayElem($paramV, 'step', 0);
         if ($step == 0) {
-            $this->WriteAttributeString('wake_up_light', json_encode([]));
+            $this->WriteAttributeString('wakeup_light_params', json_encode([]));
             $this->MaintainTimer('TimerWakeUpLight', 0);
 
             IPS_SemaphoreLeave($this->SemaphoreID);
@@ -578,51 +872,67 @@ class HmIPRGBW extends IPSModule
 
         $n_steps = (int) $this->GetArrayElem($paramV, 'n_steps', 0);
         if ($step > $n_steps) {
-            $this->WriteAttributeString('wake_up_light', json_encode([]));
+            $this->WriteAttributeString('wakeup_light_params', json_encode([]));
             $this->MaintainTimer('TimerWakeUpLight', 0);
 
             IPS_SemaphoreLeave($this->SemaphoreID);
 
-            $this->SendDebug(__FUNCTION__, 'already completed WakeUp', 0);
+            $this->SendDebug(__FUNCTION__, 'already finished WakeUp', 0);
             return false;
         }
 
         $start_ts = (int) $this->GetArrayElem($paramV, 'start_ts', 0);
-        $step_duration = (int) $this->GetArrayElem($paramV, 'step_duration', 0);
+        $step_delay = (int) $this->GetArrayElem($paramV, 'step_delay', 0);
         $duration = (int) $this->GetArrayElem($paramV, 'duration', 0);
-        $target_brightness = (int) $this->GetArrayElem($paramV, 'target_brightness', 0);
+        $min_brightness = (int) $this->GetArrayElem($paramV, 'min_brightness', 0);
+        $max_brightness = (int) $this->GetArrayElem($paramV, 'max_brightness', 0);
 
-        $secs = $step * $step_duration;
+        $secs = $step * $step_delay;
         $progress = $secs > 0 ? $secs / $duration : 0;
+        $ramp_time = $step_delay - 1;
 
-        $hsv = $this->calculateSunrise($progress, $target_brightness);
-        $r = $this->SendCombinedParameter($hsv['V'], $hsv['H'], $hsv['S']);
-        $this->SendDebug(__FUNCTION__, 'step=' . $step . ', progress=' . ($progress * 100) . '%, hsv=' . print_r($hsv, true) . ', SendCombinedParameter() ' . ($r ? 'succeeded' : 'failed'), 0);
-        if ($r) {
-            $paramV['hsv'] = $hsv;
+        $hsv = $this->calculateSunrise($progress, $min_brightness, $max_brightness);
+
+        $act_hsv = $this->RetrieveActiveHSV();
+        if ($act_hsv != $hsv) {
+            $r = $this->TransmitHSV($hsv['V'], $hsv['H'], $hsv['S'], $ramp_time);
+            if ($r) {
+                $st = 'transmission succeeded';
+                $paramV['hsv'] = $hsv;
+            } else {
+                $st = 'transmission failed';
+            }
+        } else {
+            $st = 'unchanged, no transmision';
         }
+
+        $_progress = round($progress * 100, 0);
+        $this->SendDebug(__FUNCTION__, 'step=' . $step . ', progress=' . $_progress . '%, H=' . $hsv['H'] . ', S=' . $hsv['S'] . ', V=' . $hsv['V'] . ', ' . $st, 0);
 
         $step++;
         $paramV['step'] = $step;
         if ($step > $n_steps) {
-            $this->SendDebug(__FUNCTION__, 'completed WakeUp', 0);
-            $this->WriteAttributeString('wake_up_light', json_encode([]));
+            $this->SendDebug(__FUNCTION__, 'finished WakeUpLight', 0);
+            $this->WriteAttributeString('wakeup_light_params', json_encode([]));
             $this->MaintainTimer('TimerWakeUpLight', 0);
-            $msg = 'finished WakeUpLight step=' . ($step - 1) . ', progress=' . ($progress * 100) . '% with H=' . $hsv['H'] . ', S=' . $hsv['S'] . ', L=' . $hsv['V'];
+            $_progress = round($progress * 100, 0);
+            $msg = 'finished WakeUpLight step=' . ($step - 1) . ', progress=' . $_progress . '% with H=' . $hsv['H'] . ', S=' . $hsv['S'] . ', V=' . $hsv['V'];
         } else {
-            $this->SendDebug(__FUNCTION__, 'continue WakeUp', 0);
-            $this->WriteAttributeString('wake_up_light', json_encode($paramV));
-            $delay = $start_ts + ($step * $step_duration) - time();
+            $this->SendDebug(__FUNCTION__, 'continue WakeUpLight', 0);
+            $this->WriteAttributeString('wakeup_light_params', json_encode($paramV));
+            $delay = $start_ts + ($step * $step_delay) - time();
             if ($delay <= 0) {
-                $delay = $step_duration;
+                $delay = $step_delay;
             }
             $this->MaintainTimer('TimerWakeUpLight', $delay * 1000);
-            $msg = 'executed WakeUpLight step=' . ($step - 1) . ', progress=' . ($progress * 100) . '% with H=' . $hsv['H'] . ', S=' . $hsv['S'] . ', L=' . $hsv['V'];
+            $_progress = round($progress * 100, 0);
+            $msg = 'executed WakeUpLight step=' . ($step - 1) . ', progress=' . $_progress . '% with H=' . $hsv['H'] . ', S=' . $hsv['S'] . ', V=' . $hsv['V'];
         }
 
         IPS_SemaphoreLeave($this->SemaphoreID);
 
         $this->AddModuleActivity($msg, self::$ModuleActivityLines);
+
         return true;
     }
 
@@ -633,7 +943,7 @@ class HmIPRGBW extends IPSModule
             return false;
         }
 
-        $paramV = @json_decode((string) $this->ReadAttributeString('wake_up_light'), true);
+        $paramV = @json_decode((string) $this->ReadAttributeString('wakeup_light_params'), true);
         $step = (int) $this->GetArrayElem($paramV, 'step', 0);
         if ($step == 0) {
             IPS_SemaphoreLeave($this->SemaphoreID);
@@ -642,15 +952,75 @@ class HmIPRGBW extends IPSModule
             return false;
         }
 
-        $this->WriteAttributeString('wake_up_light', json_encode([]));
+        $this->WriteAttributeString('wakeup_light_params', json_encode([]));
         $this->MaintainTimer('TimerWakeUpLight', 0);
 
         IPS_SemaphoreLeave($this->SemaphoreID);
 
-        $this->SendDebug(__FUNCTION__, 'stopped WakeUp', 0);
-        $msg = 'stopped WakeUpLight';
+        $this->SendDebug(__FUNCTION__, 'stopped WakeUpLight', 0);
 
+        $msg = 'stopped WakeUpLight';
         $this->AddModuleActivity($msg, self::$ModuleActivityLines);
+
+        return true;
+    }
+
+    public function FadeOutLight(int $ramp_time)
+    {
+        if ($ramp_time < 0) {
+            $this->SendDebug(__FUNCTION__, 'ramp time $ramp_time is < 0', 0);
+            return false;
+        }
+
+        if ($this->CheckStatus() == self::$STATUS_INVALID) {
+            $this->SendDebug(__FUNCTION__, $this->GetStatusText() . ' => skip', 0);
+            return false;
+        }
+
+        if (IPS_SemaphoreEnter($this->SemaphoreID, $this->SemaphoreTM) == false) {
+            $this->SendDebug(__FUNCTION__, 'unable to lock sempahore ' . $this->SemaphoreID, 0);
+            return false;
+        }
+
+        $paramV = @json_decode((string) $this->ReadAttributeString('wakeup_light_params'), true);
+        $step = (int) $this->GetArrayElem($paramV, 'step', 0);
+        if ($step > 0) {
+            $this->WriteAttributeString('wakeup_light_params', json_encode([]));
+            $this->MaintainTimer('TimerWakeUpLight', 0);
+        }
+
+        IPS_SemaphoreLeave($this->SemaphoreID);
+
+        if ($step > 0) {
+            $this->SendDebug(__FUNCTION__, 'interrupted WakeUpLight', 0);
+
+            $msg = 'interrupted WakeUpLight';
+            $this->AddModuleActivity($msg, self::$ModuleActivityLines);
+        }
+
+        $instID = $this->ReadPropertyInteger('chan1_instID');
+        $ident = 'COMBINED_PARAMETER';
+
+        $paramV = [
+            'L=0',					// Helligkeit
+            'OT=0',					// Einschaltzeit
+            'RT=' . $ramp_time,		// Rampenzeit beim Einschalten (sec)
+            'RTTOV=0',				// Rampenzeit beim Ausschalten
+            'RTTOU=0',				// Einheit von RTTOV (0=sec, 1=min, 3=msec)
+        ];
+        $paramS = implode(',', $paramV);
+
+        $r = @HM_WriteValueString($instID, $ident, $paramS);
+        if ($r == false) {
+            $msg = 'HM_WriteValueString(' . $instID . ', \'' . $ident . '\', ' . $paramS . ') failed';
+            $this->SendDebug(__FUNCTION__, $msg, 0);
+            return false;
+        } else {
+            $msg = 'HM_WriteValueString(' . $instID . ', \'' . $ident . '\', ' . $paramS . ') succed';
+            $this->SendDebug(__FUNCTION__, $msg, 0);
+            return true;
+        }
+
         return true;
     }
 

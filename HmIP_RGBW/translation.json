@@ -15,7 +15,18 @@
 			"Channel 0": "Kanal 0",
 			"Channel 1": "Kanal 1",
 
+			"Wakeup light": "Aufwachlicht",
+			"Variant": "Variante",
+			"Duration": "Dauer",
+			"Minutes": "Minuten",
+			"Step delay": "Schrittverzögerung",
+			"Seconds": "Sekunden",
+			"Minimum brightness": "minimale Helligkeit",
+			"Maximum brightness": "maximale Helligkeit",
+
 			"__variables__": "",
+			"Power": "Zustand",
+			"Brightness": "Helligkeit",
 			"Color": "Farbe",
 			"Color temperatur": "Farbtemperatur",
 

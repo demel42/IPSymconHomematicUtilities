@@ -1,0 +1,25 @@
+{
+	"id": "{E5F33483-6DAF-4292-C7D3-640A01C26A07}",
+	"caption": "Stop wakeup light",
+	"form": [],
+	"action": "HmIPRGBW_StopWakeUpLight($_IPS['TARGET']);",
+	"restrictions": {
+		"objectType": [
+			1
+		],
+		"moduleID": [
+			"{872EE086-0F1E-C7F3-14A6-654869563581}"
+		],
+		"includeEnvironments": [
+			"TestCommands",
+			"Default"
+		]
+	},
+	"priority": 10,
+	"category": "target",
+	"locale": {
+		"de": {
+			"Stop wakeup light": "Aufwachlicht stoppen"
+		}
+	}
+}

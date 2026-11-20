@@ -153,21 +153,21 @@ class HmIPWRCD extends IPSModule
         ];
 
         $formElements[] = [
-            'type'         => 'RowLayout',
+            'type'         => 'ExpansionPanel',
+            'caption'      => 'Homematic instances',
+            'expanded'     => true,
             'items'        => [
-                [
-                    'type'         => 'Label',
-                    'caption'      => 'Homematic instances',
-                ],
                 [
                     'type'         => 'SelectInstance',
                     'validModules' => ['{EE4A81C6-5C90-4DB7-AD2F-F6BBD521412E}'],
+                    'width'        => '50%',
                     'name'         => 'chan3_instID',
                     'caption'      => 'Channel 3'
                 ],
                 [
                     'type'         => 'SelectInstance',
                     'validModules' => ['{EE4A81C6-5C90-4DB7-AD2F-F6BBD521412E}'],
+                    'width'        => '50%',
                     'name'         => 'chan0_instID',
                     'caption'      => 'Channel 0'
                 ],
@@ -175,19 +175,25 @@ class HmIPWRCD extends IPSModule
         ];
 
         $formElements[] = [
-            'type'    => 'NumberSpinner',
-            'name'    => 'delay_before',
-            'suffix'  => 'Seconds',
-            'minimum' => 0,
-            'caption' => 'Delay before transmission',
-        ];
-
-        $formElements[] = [
-            'type'    => 'NumberSpinner',
-            'name'    => 'pause_between',
-            'suffix'  => 'Seconds',
-            'minimum' => 0,
-            'caption' => 'Pause between transmissions',
+            'type'         => 'ExpansionPanel',
+            'caption'      => 'Settings',
+            'expanded'     => true,
+            'items'        => [
+                [
+                    'type'    => 'NumberSpinner',
+                    'name'    => 'delay_before',
+                    'suffix'  => 'Seconds',
+                    'minimum' => 0,
+                    'caption' => 'Delay before transmission',
+                ],
+                [
+                    'type'    => 'NumberSpinner',
+                    'name'    => 'pause_between',
+                    'suffix'  => 'Seconds',
+                    'minimum' => 0,
+                    'caption' => 'Pause between transmissions',
+                ],
+            ],
         ];
 
         $formElements[] = [

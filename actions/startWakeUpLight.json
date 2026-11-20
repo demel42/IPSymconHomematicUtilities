@@ -1,0 +1,25 @@
+{
+	"id": "{FBD8EFB5-EFE7-1B2C-D608-8D89503A43BE}",
+	"caption": "Start wakeup light",
+	"form": [],
+	"action": "HmIPRGBW_StartWakeUpLight($_IPS['TARGET']);",
+	"restrictions": {
+		"objectType": [
+			1
+		],
+		"moduleID": [
+			"{872EE086-0F1E-C7F3-14A6-654869563581}"
+		],
+		"includeEnvironments": [
+			"TestCommands",
+			"Default"
+		]
+	},
+	"priority": 10,
+	"category": "target",
+	"locale": {
+		"de": {
+			"Start wakeup light": "Aufwachlicht starten"
+		}
+	}
+}

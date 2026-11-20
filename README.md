@@ -154,8 +154,9 @@ Es werden folgende Variablenprofile angelegt:
 
 ## 7. Versions-Historie
 
-- 1.6 @ 17.10.2026 14:23
+- 1.6 @ 26.10.2026 12:52
   - Neu: Modul HmIP_RGBW hinzugefügt
+  - Fix: kleine optische Überarbeitung der Konfigurationsmaske von HmIP_WRCD
 
 - 1.5 @ 09.05.2026 11:36
   - Fix: Änderung von deprecated php code

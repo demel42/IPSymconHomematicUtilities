@@ -1,0 +1,37 @@
+{
+	"id": "{EFE99F18-1794-9D16-8901-04CC4DEC8893}",
+	"caption": "Fade out light",
+	"form": [
+        {
+            "type": "NumberSpinner",
+            "digits": 0,
+            "minimum": 1,
+            "value": 3,
+            "suffix": "Seconds",
+            "name": "RAMP_TIME",
+            "caption": "Ramp time"
+        }
+    ],
+	"action": "HmIPRGBW_FadeOutLight($_IPS['TARGET'], $_IPS['RAMP_TIME']);",
+	"restrictions": {
+		"objectType": [
+			1
+		],
+		"moduleID": [
+			"{872EE086-0F1E-C7F3-14A6-654869563581}"
+		],
+		"includeEnvironments": [
+			"TestCommands",
+			"Default"
+		]
+	},
+	"priority": 10,
+	"category": "target",
+	"locale": {
+		"de": {
+			"Fade out light": "Licht ausblenden",
+			"Ramp time": "Anlaufzeit",
+			"Seconds": "Sekunden"
+		}
+	}
+}
